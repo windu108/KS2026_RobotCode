@@ -2,103 +2,102 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
+
+/*
+ * CAN IDs
+ * 
+ * 0 - PDP
+ * 1 - FL DT motor (Victor SPX)
+ * 2 - BL DT motor (Victor SPX)
+ * 3 - FR DT motor (Victor SPX)
+ * 4 - BR DT motor (Victor SPX)
+ */
+
 package frc.robot;
 
+import edu.wpi.first.util.sendable.SendableRegistry;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
+import com.ctre.phoenix.motorcontrol.VictorSPXControlMode;
+import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 /**
  * The methods in this class are called automatically corresponding to each mode, as described in
  * the TimedRobot documentation. If you change the name of this class or the package after creating
- * this project, you must also update the Main.java file in the project.
+ * this project, you must also update the manifest file in the resource directory.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  private final VictorSPX m_leftFrontDrive = new VictorSPX(1);
+  private final VictorSPX m_leftBackDrive= new VictorSPX(2);
+  private final VictorSPX m_rightFrontDrive = new VictorSPX(3);
+  private final VictorSPX m_rightBackDrive= new VictorSPX(4);
 
-  /**
-   * This function is run when the robot is first started up and should be used for any
-   * initialization code.
-   */
+  // private final DifferentialDrive m_robotDrive =
+  //     new DifferentialDrive(m_leftDrive::set, m_rightDrive::set);
+  private final XboxController m_controller = new XboxController(0);
+  private final Timer m_timer = new Timer();
+
+  /** Called once at the beginning of the robot program. */
   public Robot() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+    // SendableRegistry.addChild(m_robotDrive, m_leftDrive);
+    // SendableRegistry.addChild(m_robotDrive, m_rightDrive);
+
+    // We need to invert one side of the drivetrain so that positive voltages
+    // result in both sides moving forward. Depending on how your robot's
+    // gearbox is constructed, you might have to invert the left side instead.
+    //m_rightDrive.setInverted(true);
   }
 
-  /**
-   * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
-   * that you want ran during disabled, autonomous, teleoperated and test.
-   *
-   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
-   * SmartDashboard integrated updating.
-   */
-  @Override
-  public void robotPeriodic() {}
-
-  /**
-   * This autonomous (along with the chooser code above) shows how to select between different
-   * autonomous modes using the dashboard. The sendable chooser code works with the Java
-   * SmartDashboard. If you prefer the LabVIEW Dashboard, remove all of the chooser code and
-   * uncomment the getString line to get the auto name from the text box below the Gyro
-   *
-   * <p>You can add additional auto modes by adding additional comparisons to the switch structure
-   * below with additional strings. If using the SendableChooser make sure to add them to the
-   * chooser code above as well.
-   */
+  /** This function is run once each time the robot enters autonomous mode. */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+    m_timer.restart();
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
+    // // Drive for 2 seconds
+    // if (m_timer.get() < 2.0) {
+    //   // Drive forwards half speed, make sure to turn input squaring off
+    //   m_robotDrive.arcadeDrive(0.5, 0.0, false);
+    // } else {
+    //   m_robotDrive.stopMotor(); // stop robot
+    // }
   }
 
-  /** This function is called once when teleop is enabled. */
+  /** This function is called once each time the robot enters teleoperated mode. */
   @Override
   public void teleopInit() {}
 
-  /** This function is called periodically during operator control. */
+  /** This function is called periodically during teleoperated mode. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+    //m_robotDrive.arcadeDrive(-m_controller.getLeftY(), -m_controller.getRightX());
+  }
 
-  /** This function is called once when the robot is disabled. */
+  /** This function is called once each time the robot enters test mode. */
   @Override
-  public void disabledInit() {}
+  public void testInit() {
 
-  /** This function is called periodically when disabled. */
-  @Override
-  public void disabledPeriodic() {}
+    m_leftFrontDrive.follow(m_leftBackDrive);
+    m_rightFrontDrive.follow(m_rightBackDrive);
 
-  /** This function is called once when test mode is enabled. */
-  @Override
-  public void testInit() {}
+    // Just for testing
+    m_rightBackDrive.follow(m_leftBackDrive);
+
+    m_timer.restart();
+    m_leftBackDrive.set(VictorSPXControlMode.PercentOutput, 1);
+  }
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
 
-  /** This function is called once when the robot is first started up. */
-  @Override
-  public void simulationInit() {}
-
-  /** This function is called periodically whilst in simulation. */
-  @Override
-  public void simulationPeriodic() {}
+    if (m_timer.get() > 1) {
+      m_leftBackDrive.set(VictorSPXControlMode.PercentOutput, 0);
+    }
+  }
 }
